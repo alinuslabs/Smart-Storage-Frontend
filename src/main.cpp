@@ -34,10 +34,10 @@ unsigned long lastSend = 0;
 // ===============================
 // SYSTEM LIMITS
 // ===============================
-const int min_temp = 12;
-const int max_temp = 20;
-const int min_humidity = 85;
-const int max_humidity = 95;
+const float min_temp = 12;
+const float max_temp = 20;
+const float min_humidity = 85;
+const float max_humidity = 95;
 
 // ===============================
 // PINS
@@ -47,6 +47,7 @@ int dhtPin = 26;
 int fanPin = 27;
 int peltierPin = 21;
 int humidifierPin = 22;
+int ledPin = 2;
 
 #define SD_CS 5
 
@@ -263,6 +264,12 @@ void setup(){
   // -------------------------------
   pinMode(humidifierPin, OUTPUT);
   digitalWrite(humidifierPin, LOW);
+
+  // -------------------------------
+  // LED
+  // -------------------------------
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
   
   // -------------------------------
   // DHT
@@ -326,6 +333,9 @@ void loop(){
   // an identifier/reason string for whichever actuator(s) it touches)
   // ===============================
   if(mode == "auto"){
+    // Turn on LED Indicator
+    digitalWrite(ledPin, HIGH);
+    
     if(temp < min_temp){
       // Serial.println("Temp low");
       digitalWrite(peltierPin, LOW);
@@ -377,6 +387,9 @@ void loop(){
     // reasons as-is (matches original behavior)
   }
   else {
+    // Turn off LED Indicator
+    digitalWrite(ledPin, LOW);
+
     // Manual mode: auto reasons don't apply.
     ventReason = "";
     fanReason = "";
