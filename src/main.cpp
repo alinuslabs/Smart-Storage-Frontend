@@ -1,5 +1,4 @@
-
-// IMPORT
+// IMPORTS
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include <DHT.h>
@@ -12,19 +11,24 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <LiquidCrystal_I2C.h>
-// WIFI CONFI
+
+// WIFI CONFIG
 const char* ssid = "Redmi 12C";
 const char* password = "@@@$$$###!!...";
+
 // SERVER OBJECT
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
-// TIMIN
+
+// TIMING
 unsigned long lastSend = 0;
+
 // SYSTEM LIMIT
 const float min_temp = 12;
 const float max_temp = 20;
 const float min_humidity = 85;
 const float max_humidity = 95;
+
 // PIN
 int servoPin = 14;
 int dhtPin = 13;
@@ -35,12 +39,14 @@ int ledPin = 2;
 // int extDhtPin = 13;
 
 #define SD_CS 5
+
 // STATE VARIABLE
 String servoState = "0";
 String fanState = "0";
 String peltierState = "0";
 String humidifierState = "0";
 bool reset = true;
+
 // AUTO MODE — IDENTIFIER / REASON TRACKIN
 // Per-actuator "why" string, e.g. "humidity>95%". Cleared in manual mode.
 String ventReason = "";
@@ -55,14 +61,16 @@ Servo servoVent;
 RTC_DS3231 rtc;
 DHT dht(dhtPin, DHT22);
 // DHT extDht(extDhtPin, DHT22);
+
 LiquidCrystal_I2C lcd(0x27, 20, 4);
-// JSON BUFFE
+
+// JSON BUFFER
 JsonDocument jsonDoc;
-// MODE CONTRO
+
+// MODE CONTROL
 String mode = "manual";
 
-// SD CARD FUNCTION
-
+// SD CARD FUNCTIONS
 // Write / Append to SD card
 void saveToFile(String data, String type){
 
@@ -102,10 +110,12 @@ void readFromFile(){
 
   file.close();
 }
-// WEBSOCKET SEN
+
+// WEBSOCKET SEND
 void notifyClients(String message){
   ws.textAll(message);
 }
+
 // HANDLE CLIENT MESSAGE
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
 
@@ -120,7 +130,6 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
 
 
     // OPTIONAL COMMAND CONTROL
-
     if(msg == "fan_on"){
       digitalWrite(fanPin, HIGH);
     }
@@ -190,13 +199,15 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
     notifyClients("ACK: " + msg);
   }
 }
+
 // WEBSOCKET EVENT
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
   if(type == WS_EVT_DATA){
     handleWebSocketMessage(arg, data, len);
   }
 }
-// SETU
+
+// SETUP
 void setup(){
 
   Serial.begin(9600);
@@ -265,7 +276,7 @@ void setup(){
 
   Serial.println("\nConnected: " + WiFi.localIP().toString());
   lcd.setCursor(0, 0);
-  lcd.print("IP: " + WiFi.localIP().toString());
+  lcd.print(WiFi.localIP().toString());
 
   // WEBSOCKET
   ws.onEvent(onEvent);
@@ -273,7 +284,8 @@ void setup(){
 
   server.begin();
 }
-// LOO
+
+// LOOP
 void loop(){
 
   float temp = dht.readTemperature();
@@ -408,9 +420,9 @@ void loop(){
   }
 
   lcd.setCursor(0, 1);
-  lcd.print("Temp: " + String(temp) + "C  Hum: " + String(hum) + "%");
+  lcd.print("Temp:" + String(temp) + "C  Hum:" + String(hum) + "%");
   lcd.setCursor(0, 2);
-  lcd.print("Mode: " + mode + " Vent: " + servoState);
+  lcd.print("Mode:" + mode + " V:" + servoState);
   lcd.setCursor(0, 3);
-  lcd.print("F: " + fanState + " P: " + peltierState + " H: " + humidifierState);
+  lcd.print("F:" + fanState + " P:" + peltierState + " H:" + humidifierState);
 }
