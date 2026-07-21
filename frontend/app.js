@@ -4,7 +4,7 @@
 // including over mDNS (e.g. http://esp32.local/).
 // A manual override is kept in localStorage for local testing / fallback.
 
-const DEFAULT_HOST = "10.136.1.210" || "esp32.local";
+const DEFAULT_HOST = "10.234.168.210" || "esp32.local";
 const STORAGE_KEY = "smart-storage-host";
 
 function getHost() {
@@ -149,9 +149,13 @@ function handleMessage(event) {
   document.getElementById("time").textContent = data.time ?? "--:--:--";
   document.getElementById("temp").textContent = data.temperature ?? "--";
   document.getElementById("hum").textContent = data.humidity ?? "--";
+  // document.getElementById("extTemp").textContent = data.external_temperature ?? "--";
+  // document.getElementById("extHum").textContent = data.external_humidity ?? "--";
 
   setGauge("gaugeTemp", data.temperature, 0, 50);
   setGauge("gaugeHum", data.humidity, 0, 100);
+  // setGauge("extGaugeTemp", data.external_temperature, 0, 50);
+  // setGauge("extGaugeHum", data.external_humidity, 0, 100);
 
   // Keep the segmented control / visible panels in sync with the device's
   // authoritative mode (useful if more than one browser tab is connected).

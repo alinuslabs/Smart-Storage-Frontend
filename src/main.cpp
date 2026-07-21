@@ -12,7 +12,7 @@
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include <ArduinoJson.h>
+#include <LiquidCrystal_I2C.h>
 
 // ===============================
 // WIFI CONFIG
@@ -43,11 +43,12 @@ const float max_humidity = 95;
 // PINS
 // ===============================
 int servoPin = 14;
-int dhtPin = 26;
-int fanPin = 27;
-int peltierPin = 21;
-int humidifierPin = 22;
+int dhtPin = 13;
+int fanPin = 27; //IN 1
+int peltierPin = 12; //IN 2
+int humidifierPin = 25; //IN 3
 int ledPin = 2;
+// int extDhtPin = 13;
 
 #define SD_CS 5
 
@@ -78,6 +79,8 @@ String autoSummary = "";
 Servo servoVent;
 RTC_DS3231 rtc;
 DHT dht(dhtPin, DHT22);
+// DHT extDht(extDhtPin, DHT22);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // ===============================
 // JSON BUFFER
@@ -110,6 +113,8 @@ void saveToFile(String data, String type){
     file.close();
   } else {
     Serial.println("SD write error");
+    lcd.setCursor(0, 0);
+    lcd.print("SD write error");
   }
 }
 
@@ -120,6 +125,8 @@ void readFromFile(){
 
   if(!file){
     Serial.println("SD read error");
+    lcd.setCursor(0, 0);
+    lcd.print("SD read error");
     return;
   }
 
@@ -241,48 +248,41 @@ void setup(){
   Serial.begin(9600);
   delay(1000);
 
-  // -------------------------------
   // SERVO
-  // -------------------------------
   servoVent.attach(servoPin);
   servoVent.write(0);
 
-  // -------------------------------
   // FAN
-  // -------------------------------
   pinMode(fanPin, OUTPUT);
   digitalWrite(fanPin, LOW);
 
-  // -------------------------------
   // PELTIER
-  // -------------------------------
   pinMode(peltierPin, OUTPUT);
   digitalWrite(peltierPin, LOW);
 
-  // -------------------------------
   // HUMIDIFIER
-  // -------------------------------
   pinMode(humidifierPin, OUTPUT);
   digitalWrite(humidifierPin, LOW);
 
-  // -------------------------------
   // LED
-  // -------------------------------
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
   
-  // -------------------------------
   // DHT
-  // -------------------------------
   dht.begin();
+  // extDht.begin();
 
-  // -------------------------------
   // I2C (RTC)
-  // -------------------------------
-  Wire.begin(32, 33); // SDA -> 32, SCL -> 33 pins for ESP32
+  Wire.begin(21, 22); // SDA -> 21, SCL -> 22 pins for ESP32
+
+  // LCD
+  lcd.init();
+  lcd.backlight();
 
   if(!rtc.begin()){
     Serial.println("RTC missing");
+    lcd.setCursor(0, 0);
+    lcd.print("RTC missing");
     while(1);
   }
 
@@ -290,29 +290,30 @@ void setup(){
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 
-  // -------------------------------
   // SD CARD
-  // -------------------------------
-  if(!SD.begin(SD_CS)){
-    Serial.println("SD failed");
-    while(1);
-  }
+  // if(!SD.begin(SD_CS)){
+  //   Serial.println("SD failed");
+  //   lcd.setCursor(0, 0);
+  //   lcd.print("SD failed");
+  //   while(1);
+  // }
 
-  // -------------------------------
   // WIFI
-  // -------------------------------
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
+  lcd.setCursor(0, 0);
+  lcd.print("Connecting to WiFi");
   while(WiFi.status() != WL_CONNECTED){
     delay(500);
     Serial.print(".");
+    lcd.print(".");
   }
 
   Serial.println("\nConnected: " + WiFi.localIP().toString());
+  lcd.setCursor(0, 0);
+  lcd.print("IP: " + WiFi.localIP().toString());
 
-  // -------------------------------
   // WEBSOCKET
-  // -------------------------------
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 
@@ -326,6 +327,9 @@ void loop(){
 
   float temp = dht.readTemperature();
   float hum = dht.readHumidity();
+
+  // float extTemp = extDht.readTemperature();
+  // float extHum = extDht.readHumidity();
   DateTime now = rtc.now();
 
   // ===============================
@@ -409,9 +413,9 @@ void loop(){
   peltierState = (digitalRead(peltierPin) == HIGH) ? "1" : "0";
   humidifierState = (digitalRead(humidifierPin) == HIGH) ? "1" : "0";
 
-  String logData = date + ", " + time + ", " + String(temp) + "C, " + String(hum) + "%, " + servoState + ", " + fanState + ", " + peltierState + ", " + humidifierState;
+  // String logData = date + ", " + time + ", " + ", " + String(temp) + "C, " + String(hum) + "%, " + servoState + ", " + fanState + ", " + peltierState + ", " + humidifierState;
 
-  saveToFile(logData, "append");
+  // saveToFile(logData, "append");
 
   // ===============================
   // AUTO SUMMARY — single combined line for the frontend's log strip,
@@ -419,10 +423,10 @@ void loop(){
   // ===============================
   autoSummary = "";
   if(mode == "auto"){
-    if(servoState == "1")       autoSummary += "Vent: " + ventReason + " \n";
-    if(fanState == "1")         autoSummary += "Fan: " + fanReason + " \n";
-    if(peltierState == "1")     autoSummary += "Peltier: " + peltierReason + " \n";
-    if(humidifierState == "1")  autoSummary += "Humidifier: " + humidifierReason + " \n";
+    if(servoState == "1") autoSummary += "Vent: " + ventReason + " \n";
+    if(fanState == "1") autoSummary += "Fan: " + fanReason + " \n";
+    if(peltierState == "1") autoSummary += "Peltier: " + peltierReason + " \n";
+    if(humidifierState == "1") autoSummary += "Humidifier: " + humidifierReason + " \n";
 
     if(autoSummary == ""){
       autoSummary = "All readings within range - no actuators active";
@@ -436,6 +440,8 @@ void loop(){
   jsonDoc["time"] = time;
   jsonDoc["temperature"] = temp;
   jsonDoc["humidity"] = hum;
+  // jsonDoc["external_temperature"] = extTemp;
+  // jsonDoc["external_humidity"] = extHum;
   jsonDoc["mode"] = mode;
   jsonDoc["servoState"] = servoState;
   jsonDoc["fanState"] = fanState;
@@ -453,8 +459,15 @@ void loop(){
   ws.cleanupClients();
 
   // Send updates to clients every (value/1000) second
-  if(millis() - lastSend > 10){
+  if(millis() - lastSend > 1000){
     lastSend = millis();
     notifyClients(json);
   }
+
+  lcd.setCursor(0, 1);
+  lcd.print("Temp: " + String(temp) + "C  Hum: " + String(hum) + "%");
+  lcd.setCursor(0, 2);
+  lcd.print("Mode: " + mode + " Vent: " + servoState);
+  lcd.setCursor(0, 3);
+  lcd.print("F: " + fanState + " P: " + peltierState + " H: " + humidifierState);
 }
