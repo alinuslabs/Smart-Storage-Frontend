@@ -1,6 +1,5 @@
-// ===============================
-// IMPORTS
-// ===============================
+
+// IMPORT
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include <DHT.h>
@@ -13,35 +12,20 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <LiquidCrystal_I2C.h>
-
-// ===============================
-// WIFI CONFIG
-// ===============================
+// WIFI CONFI
 const char* ssid = "Redmi 12C";
 const char* password = "@@@$$$###!!...";
-
-// ===============================
-// SERVER OBJECTS
-// ===============================
+// SERVER OBJECT
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
-
-// ===============================
-// TIMING
-// ===============================
+// TIMIN
 unsigned long lastSend = 0;
-
-// ===============================
-// SYSTEM LIMITS
-// ===============================
+// SYSTEM LIMIT
 const float min_temp = 12;
 const float max_temp = 20;
 const float min_humidity = 85;
 const float max_humidity = 95;
-
-// ===============================
-// PINS
-// ===============================
+// PIN
 int servoPin = 14;
 int dhtPin = 13;
 int fanPin = 27; //IN 1
@@ -51,19 +35,13 @@ int ledPin = 2;
 // int extDhtPin = 13;
 
 #define SD_CS 5
-
-// ===============================
-// STATE VARIABLES
-// ===============================
+// STATE VARIABLE
 String servoState = "0";
 String fanState = "0";
 String peltierState = "0";
 String humidifierState = "0";
 bool reset = true;
-
-// ===============================
-// AUTO MODE — IDENTIFIER / REASON TRACKING
-// ===============================
+// AUTO MODE — IDENTIFIER / REASON TRACKIN
 // Per-actuator "why" string, e.g. "humidity>95%". Cleared in manual mode.
 String ventReason = "";
 String fanReason = "";
@@ -72,30 +50,18 @@ String humidifierReason = "";
 
 // Combined, human-readable summary of what's currently active in auto mode.
 String autoSummary = "";
-
-// ===============================
-// COMPONENTS
-// ===============================
+// COMPONENT
 Servo servoVent;
 RTC_DS3231 rtc;
 DHT dht(dhtPin, DHT22);
 // DHT extDht(extDhtPin, DHT22);
 LiquidCrystal_I2C lcd(0x27, 20, 4);
-
-// ===============================
-// JSON BUFFER
-// ===============================
+// JSON BUFFE
 JsonDocument jsonDoc;
-
-// ===============================
-// MODE CONTROL
-// ===============================
+// MODE CONTRO
 String mode = "manual";
 
-
-// ===============================
-// SD CARD FUNCTIONS
-// ===============================
+// SD CARD FUNCTION
 
 // Write / Append to SD card
 void saveToFile(String data, String type){
@@ -136,17 +102,11 @@ void readFromFile(){
 
   file.close();
 }
-
-// ===============================
-// WEBSOCKET SEND
-// ===============================
+// WEBSOCKET SEN
 void notifyClients(String message){
   ws.textAll(message);
 }
-
-// ===============================
-// HANDLE CLIENT MESSAGES
-// ===============================
+// HANDLE CLIENT MESSAGE
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
 
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
@@ -158,9 +118,9 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
 
     Serial.println("CMD: " + msg);
 
-    // ===============================
+
     // OPTIONAL COMMAND CONTROL
-    // ===============================
+
     if(msg == "fan_on"){
       digitalWrite(fanPin, HIGH);
     }
@@ -230,19 +190,13 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
     notifyClients("ACK: " + msg);
   }
 }
-
-// ===============================
-// WEBSOCKET EVENTS
-// ===============================
+// WEBSOCKET EVENT
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
   if(type == WS_EVT_DATA){
     handleWebSocketMessage(arg, data, len);
   }
 }
-
-// ===============================
-// SETUP
-// ===============================
+// SETU
 void setup(){
 
   Serial.begin(9600);
@@ -319,10 +273,7 @@ void setup(){
 
   server.begin();
 }
-
-// ===============================
-// LOOP
-// ===============================
+// LOO
 void loop(){
 
   float temp = dht.readTemperature();
@@ -332,10 +283,8 @@ void loop(){
   // float extHum = extDht.readHumidity();
   DateTime now = rtc.now();
 
-  // ===============================
   // CONTROL LOGIC (actuator behavior unchanged — only now also records
   // an identifier/reason string for whichever actuator(s) it touches)
-  // ===============================
   if(mode == "auto"){
     // Turn on LED Indicator
     digitalWrite(ledPin, HIGH);
@@ -402,9 +351,7 @@ void loop(){
   }
   
 
-  // ===============================
   // LOGGING
-  // ===============================
   String date = String(now.day()) + "/" + String(now.month()) + "/" + String(now.year());
   String time = String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second());
 
@@ -417,10 +364,8 @@ void loop(){
 
   // saveToFile(logData, "append");
 
-  // ===============================
   // AUTO SUMMARY — single combined line for the frontend's log strip,
   // e.g. "Humidifier: humidity<85%  Fan: temp>20C"
-  // ===============================
   autoSummary = "";
   if(mode == "auto"){
     if(servoState == "1") autoSummary += "Vent: " + ventReason + " \n";
@@ -433,9 +378,7 @@ void loop(){
     }
   }
 
-  // ===============================
   // JSON STREAM TO FRONTEND
-  // ===============================
   jsonDoc["date"] = date;
   jsonDoc["time"] = time;
   jsonDoc["temperature"] = temp;
