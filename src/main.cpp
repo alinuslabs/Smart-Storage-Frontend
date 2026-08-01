@@ -12,9 +12,12 @@
 #include <ESPAsyncWebServer.h>
 #include <LiquidCrystal_I2C.h>
 
-// WIFI CONFIG
-const char* ssid = "Redmi 12C";
-const char* password = "@@@$$$###!!...";
+// WIFI CONFIG (Access Point mode - the ESP32 creates its own network)
+// Anyone can connect to this network + open the device's IP in a browser,
+// no code access needed. Change these to whatever you like.
+// Note: WPA2 requires the password to be at least 8 characters.
+const char* ap_ssid = "SmartStorage";
+const char* ap_password = "storage123";
 
 // SERVER OBJECT
 AsyncWebServer server(80);
@@ -24,10 +27,10 @@ AsyncWebSocket ws("/ws");
 unsigned long lastSend = 0;
 
 // SYSTEM LIMIT
-const float min_temp = 12;
+const float min_temp = 15;
 const float max_temp = 20;
 const float min_humidity = 85;
-const float max_humidity = 95;
+const float max_humidity = 93;
 
 // PIN
 int servoPin = 14;
@@ -36,19 +39,16 @@ int fanPin = 27; //IN 1
 int peltierPin = 12; //IN 2
 int humidifierPin = 25; //IN 3
 int ledPin = 2;
-// int extDhtPin = 13;
-
-#define SD_CS 5
+int extDhtPin = 26;
 
 // STATE VARIABLE
 String servoState = "0";
 String fanState = "0";
 String peltierState = "0";
 String humidifierState = "0";
-bool reset = true;
+bool reset = false;
 
-// AUTO MODE — IDENTIFIER / REASON TRACKIN
-// Per-actuator "why" string, e.g. "humidity>95%". Cleared in manual mode.
+// AUTO MODE — IDENTIFIER / REASON TRACKING
 String ventReason = "";
 String fanReason = "";
 String peltierReason = "";
@@ -56,60 +56,19 @@ String humidifierReason = "";
 
 // Combined, human-readable summary of what's currently active in auto mode.
 String autoSummary = "";
+
 // COMPONENT
 Servo servoVent;
 RTC_DS3231 rtc;
 DHT dht(dhtPin, DHT22);
-// DHT extDht(extDhtPin, DHT22);
-
+DHT extDht(extDhtPin, DHT22);
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // JSON BUFFER
 JsonDocument jsonDoc;
 
 // MODE CONTROL
-String mode = "manual";
-
-// SD CARD FUNCTIONS
-// Write / Append to SD card
-void saveToFile(String data, String type){
-
-  File file;
-
-  if(type == "write"){
-    file = SD.open("/datalog.txt", FILE_WRITE);
-  } else {
-    file = SD.open("/datalog.txt", FILE_APPEND);
-  }
-
-  if(file){
-    file.println(data);
-    file.close();
-  } else {
-    Serial.println("SD write error");
-    lcd.setCursor(0, 0);
-    lcd.print("SD write error");
-  }
-}
-
-// Read SD card
-void readFromFile(){
-
-  File file = SD.open("/datalog.txt");
-
-  if(!file){
-    Serial.println("SD read error");
-    lcd.setCursor(0, 0);
-    lcd.print("SD read error");
-    return;
-  }
-
-  while(file.available()){
-    Serial.write(file.read());
-  }
-
-  file.close();
-}
+String mode = "auto";
 
 // WEBSOCKET SEND
 void notifyClients(String message){
@@ -139,23 +98,6 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len){
     }
 
     if(msg == "vent_open"){
-      // servoVent.write(90);
-      // delay(300);
-      // servoVent.write(180);
-      // delay(300);
-      // servoVent.write(0);
-      // delay(400);
-      
-      // int count = 18;
-      // int angle = 10;
-
-      // for (int i = 0; i < count; i++)
-      // {
-      //   servoVent.write(angle);
-      //   angle += 10;
-      //   delay(50);
-      // }
-  
       servoVent.write(90);
     }
 
@@ -235,7 +177,7 @@ void setup(){
   
   // DHT
   dht.begin();
-  // extDht.begin();
+  extDht.begin();
 
   // I2C (RTC)
   Wire.begin(21, 22); // SDA -> 21, SCL -> 22 pins for ESP32
@@ -255,29 +197,27 @@ void setup(){
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 
-  // SD CARD
-  // if(!SD.begin(SD_CS)){
-  //   Serial.println("SD failed");
-  //   lcd.setCursor(0, 0);
-  //   lcd.print("SD failed");
-  //   while(1);
-  // }
-
-  // WIFI
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi");
+  // WIFI — start our own Access Point instead of joining an existing network.
+  // Devices connect to this network directly (no code access required),
+  // then browse to the IP printed below (typically 192.168.4.1).
   lcd.setCursor(0, 0);
-  lcd.print("Connecting to WiFi");
-  while(WiFi.status() != WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-    lcd.print(".");
+  lcd.print("Starting AP...");
+
+  WiFi.softAP(ap_ssid, ap_password);
+  IPAddress apIP = WiFi.softAPIP();
+
+  Serial.println("\nAccess Point started");
+  Serial.println("SSID: " + String(ap_ssid));
+  Serial.println("AP IP address: " + apIP.toString());
+
+  for (int i = 0; i < 4; i++)
+  {
+    lcd.setCursor(0, i);
+    lcd.print("                    ");
   }
 
-  Serial.println("\nConnected: " + WiFi.localIP().toString());
   lcd.setCursor(0, 0);
-  lcd.print(WiFi.localIP().toString());
-
+  
   // WEBSOCKET
   ws.onEvent(onEvent);
   server.addHandler(&ws);
@@ -291,12 +231,11 @@ void loop(){
   float temp = dht.readTemperature();
   float hum = dht.readHumidity();
 
-  // float extTemp = extDht.readTemperature();
-  // float extHum = extDht.readHumidity();
+  float extTemp = extDht.readTemperature();
+  float extHum = extDht.readHumidity();
   DateTime now = rtc.now();
 
-  // CONTROL LOGIC (actuator behavior unchanged — only now also records
-  // an identifier/reason string for whichever actuator(s) it touches)
+  // CONTROL LOGIC 
   if(mode == "auto"){
     // Turn on LED Indicator
     digitalWrite(ledPin, HIGH);
@@ -372,10 +311,6 @@ void loop(){
   peltierState = (digitalRead(peltierPin) == HIGH) ? "1" : "0";
   humidifierState = (digitalRead(humidifierPin) == HIGH) ? "1" : "0";
 
-  // String logData = date + ", " + time + ", " + ", " + String(temp) + "C, " + String(hum) + "%, " + servoState + ", " + fanState + ", " + peltierState + ", " + humidifierState;
-
-  // saveToFile(logData, "append");
-
   // AUTO SUMMARY — single combined line for the frontend's log strip,
   // e.g. "Humidifier: humidity<85%  Fan: temp>20C"
   autoSummary = "";
@@ -395,8 +330,8 @@ void loop(){
   jsonDoc["time"] = time;
   jsonDoc["temperature"] = temp;
   jsonDoc["humidity"] = hum;
-  // jsonDoc["external_temperature"] = extTemp;
-  // jsonDoc["external_humidity"] = extHum;
+  jsonDoc["external_temperature"] = extTemp;
+  jsonDoc["external_humidity"] = extHum;
   jsonDoc["mode"] = mode;
   jsonDoc["servoState"] = servoState;
   jsonDoc["fanState"] = fanState;
@@ -418,11 +353,18 @@ void loop(){
     lastSend = millis();
     notifyClients(json);
   }
-
+  
+  // LCD DISPLAY
+  lcd.setCursor(0, 0);
+  lcd.print("IP: " + WiFi.softAPIP().toString());
   lcd.setCursor(0, 1);
-  lcd.print("Temp:" + String(temp) + "C  Hum:" + String(hum) + "%");
+  lcd.print("T:" + String(temp) + "C  H:" + String(hum) + "%");
   lcd.setCursor(0, 2);
-  lcd.print("Mode:" + mode + " V:" + servoState);
+  lcd.print("Mode: " + mode);
+  if (mode == "auto"){ // to prevent the lcd from printing autoal (manual -> autoal)
+    lcd.setCursor(10, 2);
+    lcd.print("  ");
+  }
   lcd.setCursor(0, 3);
-  lcd.print("F:" + fanState + " P:" + peltierState + " H:" + humidifierState);
+  lcd.print(" V:" + servoState + "  F:" + fanState + "  P:" + peltierState + "  H:" + humidifierState);
 }
