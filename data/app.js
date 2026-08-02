@@ -151,11 +151,9 @@ function resetDashboard() {
   document.getElementById("time").textContent = "--:--:--";
   document.getElementById("temp").textContent = "--";
   document.getElementById("hum").textContent = "--";
-  document.getElementById("extTemp").textContent = "--";
-  document.getElementById("extHum").textContent = "--";
 
   // Gauge rings back to empty
-  ["gaugeTemp", "gaugeHum", "extGaugeTemp", "extGaugeHum"].forEach((id) => {
+  ["gaugeTemp", "gaugeHum"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.setProperty("--pct", 0);
   });
@@ -196,13 +194,9 @@ function handleMessage(event) {
   document.getElementById("time").textContent = data.time ?? "--:--:--";
   document.getElementById("temp").textContent = data.temperature ?? "--";
   document.getElementById("hum").textContent = data.humidity ?? "--";
-  document.getElementById("extTemp").textContent = data.external_temperature ?? "--";
-  document.getElementById("extHum").textContent = data.external_humidity ?? "--";
 
   setGauge("gaugeTemp", data.temperature, 0, 50);
   setGauge("gaugeHum", data.humidity, 0, 100);
-  setGauge("extGaugeTemp", data.external_temperature, 0, 50);
-  setGauge("extGaugeHum", data.external_humidity, 0, 100);
 
   // Keep the segmented control / visible panels in sync with the device's
   // authoritative mode (useful if more than one browser tab is connected).

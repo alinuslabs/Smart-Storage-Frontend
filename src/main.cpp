@@ -40,7 +40,6 @@ int fanPin = 27; //IN 1
 int peltierPin = 12; //IN 2
 int humidifierPin = 25; //IN 3
 int ledPin = 2;
-int extDhtPin = 26;
 
 // STATE VARIABLE
 String servoState = "0";
@@ -62,7 +61,6 @@ String autoSummary = "";
 Servo servoVent;
 RTC_DS3231 rtc;
 DHT dht(dhtPin, DHT22);
-DHT extDht(extDhtPin, DHT22);
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
@@ -179,7 +177,6 @@ void setup(){
   
   // DHT
   dht.begin();
-  extDht.begin();
 
   // I2C (RTC)
   Wire.begin(21, 22); // SDA -> 21, SCL -> 22 pins for ESP32
@@ -225,6 +222,8 @@ void setup(){
     lcd.println("LittleFS mounted");
   }
 
+  delay(1000);
+
   // Serve the dashboard files. "/" maps to index.html automatically.
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
 
@@ -246,9 +245,6 @@ void loop(){
 
   float temp = dht.readTemperature();
   float hum = dht.readHumidity();
-
-  float extTemp = extDht.readTemperature();
-  float extHum = extDht.readHumidity();
   DateTime now = rtc.now();
 
   // CONTROL LOGIC 
@@ -346,8 +342,6 @@ void loop(){
   jsonDoc["time"] = time;
   jsonDoc["temperature"] = temp;
   jsonDoc["humidity"] = hum;
-  jsonDoc["external_temperature"] = extTemp;
-  jsonDoc["external_humidity"] = extHum;
   jsonDoc["mode"] = mode;
   jsonDoc["servoState"] = servoState;
   jsonDoc["fanState"] = fanState;
