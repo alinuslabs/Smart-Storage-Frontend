@@ -8,224 +8,234 @@
 </head>
 <body>
 
-<div class="panel">
+  <div class="panel">
 
-  <!-- Top bar -->
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark"></span>
-      <div>
-        <h1>Smart Storage System</h1>
-        <span class="brand-sub">ESP32 Smart Storage</span>
+    <!-- Disconnected overlay: covers the dashboard whenever the WebSocket
+        connection to the ESP32 is down, so it's impossible to miss. -->
+    <div class="disconnect-overlay hidden" id="disconnectOverlay">
+      <div class="disconnect-card">
+        <span class="disconnect-dot"></span>
+        <h2>Disconnected</h2>
+        <p id="disconnectMsg">Lost connection to the device&hellip;</p>
+        <p class="disconnect-hint">Make sure you're connected to the <strong>SmartStorage</strong> WiFi network.</p>
       </div>
     </div>
 
-    <div class="topbar-right">
-      <button class="link-btn" id="settingsToggle" aria-label="Connection settings">Connection</button>
-      <div class="conn" id="connWrap">
-        <span class="led conn-led" id="connLed"></span>
-        <span id="status">Disconnected</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- Connection settings (hidden by default) -->
-  <div class="settings hidden" id="settingsPanel">
-    <p class="settings-hint">
-      By default this page connects to the device that served it. If you opened this file directly
-      (e.g. from your computer) or your board doesn't support mDNS, set a host below.
-    </p>
-    <div class="settings-row">
-      <input type="text" id="hostInput" placeholder="esp32.local or 192.168.1.42">
-      <button id="hostSave">Save</button>
-      <button id="hostReset" class="ghost">Use default</button>
-    </div>
-  </div>
-
-  <!-- Mode switch -->
-  <div class="mode-row">
-    <span class="mode-label">Mode</span>
-    <div class="segmented" id="modeSwitch" role="tablist">
-      <button class="segment active" data-mode="auto" role="tab" aria-selected="true">Auto</button>
-      <button class="segment" data-mode="manual" role="tab" aria-selected="false">Manual</button>
-    </div>
-  </div>
-
-  <!-- Schematic / readouts -->
-  <section class="readouts">
-    <div class="clock-strip">
-      <div class="clock-field">
-        <span class="clock-label">Date</span>
-        <span class="clock-value" id="date">--</span>
-      </div>
-      <div class="clock-field">
-        <span class="clock-label">Time</span>
-        <span class="clock-value" id="time">--:--:--</span>
-      </div>
-    </div>
-
-    <div class="gauges">
-      <div class="gauge-block">
-        <div class="gauge-ring" id="gaugeTemp" style="--pct:0">
-          <div class="gauge-inner">
-            <span class="gauge-value" id="temp">--</span>
-            <span class="gauge-unit">&deg;C</span>
-          </div>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <h1>Smart Storage System</h1>
+          <span class="brand-sub">ESP32 Smart Storage</span>
         </div>
-        <span class="gauge-label">Temperature</span>
       </div>
 
-      <!-- Signature element: live schematic linking sensors to the MCU to actuators -->
-      <svg class="schematic" id="schematic" viewBox="0 0 200 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <path class="trace" d="M30,30 C70,30 80,60 100,80"></path>
-        <path class="trace" d="M170,30 C130,30 120,60 100,80"></path>
-        <path class="trace" d="M30,130 C70,130 80,100 100,80"></path>
-        <path class="trace" d="M70,150 C85,130 90,110 100,80"></path>
-        <path class="trace" d="M130,150 C115,130 110,110 100,80"></path>
-        <path class="trace" d="M170,130 C130,130 120,100 100,80"></path>
-        <polygon class="mcu" points="100,68 112,75 112,89 100,96 88,89 88,75"></polygon>
-        <text class="mcu-label" x="100" y="83" text-anchor="middle">IN</text>
-      </svg>
-
-      <div class="gauge-block">
-        <div class="gauge-ring" id="gaugeHum" style="--pct:0">
-          <div class="gauge-inner">
-            <span class="gauge-value" id="hum">--</span>
-            <span class="gauge-unit">%RH</span>
-          </div>
+      <div class="topbar-right">
+        <button class="link-btn" id="settingsToggle" aria-label="Connection settings">Connection</button>
+        <div class="conn" id="connWrap">
+          <span class="led conn-led" id="connLed"></span>
+          <span id="status">Disconnected</span>
         </div>
-        <span class="gauge-label">Humidity</span>
+      </div>
+    </header>
+
+    <!-- Connection settings (hidden by default) -->
+    <div class="settings hidden" id="settingsPanel">
+      <p class="settings-hint">
+        By default this page connects to the device that served it. If you opened this file directly
+        (e.g. from your computer) or your board doesn't support mDNS, set a host below.
+      </p>
+      <div class="settings-row">
+        <input type="text" id="hostInput" placeholder="esp32.local or 192.168.1.42">
+        <button id="hostSave">Save</button>
+        <button id="hostReset" class="ghost">Use default</button>
       </div>
     </div>
 
-    <div class="gauges">
-      <div class="gauge-block">
-        <div class="gauge-ring" id="extGaugeTemp" style="--pct:0">
-          <div class="gauge-inner">
-            <span class="gauge-value" id="extTemp">--</span>
-            <span class="gauge-unit">&deg;C</span>
-          </div>
+    <!-- Mode switch -->
+    <div class="mode-row">
+      <span class="mode-label">Mode</span>
+      <div class="segmented" id="modeSwitch" role="tablist">
+        <button class="segment active" data-mode="auto" role="tab" aria-selected="true">Auto</button>
+        <button class="segment" data-mode="manual" role="tab" aria-selected="false">Manual</button>
+      </div>
+    </div>
+
+    <!-- Schematic / readouts -->
+    <section class="readouts">
+      <div class="clock-strip">
+        <div class="clock-field">
+          <span class="clock-label">Date</span>
+          <span class="clock-value" id="date">--</span>
         </div>
-        <span class="gauge-label">External Temperature</span>
-      </div>
-
-      <!-- Signature element: live schematic linking sensors to the MCU to actuators -->
-      <svg class="schematic" id="schematic" viewBox="0 0 200 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <path class="trace" d="M30,30 C70,30 80,60 100,80"></path>
-        <path class="trace" d="M170,30 C130,30 120,60 100,80"></path>
-        <path class="trace" d="M30,130 C70,130 80,100 100,80"></path>
-        <path class="trace" d="M70,150 C85,130 90,110 100,80"></path>
-        <path class="trace" d="M130,150 C115,130 110,110 100,80"></path>
-        <path class="trace" d="M170,130 C130,130 120,100 100,80"></path>
-        <polygon class="mcu" points="100,68 112,75 112,89 100,96 88,89 88,75"></polygon>
-        <text class="mcu-label" x="100" y="83" text-anchor="middle">OUT</text>
-      </svg>
-
-      <div class="gauge-block">
-        <div class="gauge-ring" id="extGaugeHum" style="--pct:0">
-          <div class="gauge-inner">
-            <span class="gauge-value" id="extHum">--</span>
-            <span class="gauge-unit">%RH</span>
-          </div>
+        <div class="clock-field">
+          <span class="clock-label">Time</span>
+          <span class="clock-value" id="time">--:--:--</span>
         </div>
-        <span class="gauge-label">External Humidity</span>
       </div>
-    </div>
-  </section>
 
-  <!-- Actuator modules (manual mode) -->
-  <section class="modules hidden" id="control">
+      <div class="gauges">
+        <div class="gauge-block">
+          <div class="gauge-ring" id="gaugeTemp" style="--pct:0">
+            <div class="gauge-inner">
+              <span class="gauge-value" id="temp">--</span>
+              <span class="gauge-unit">&deg;C</span>
+            </div>
+          </div>
+          <span class="gauge-label">Temperature</span>
+        </div>
 
-    <div class="module" data-actuator="vent">
-      <div class="module-head">
-        <span class="led" id="ledVent"></span>
-        <h3>Vent</h3>
+        <!-- Signature element: live schematic linking sensors to the MCU to actuators -->
+        <svg class="schematic" id="schematic" viewBox="0 0 200 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <path class="trace" d="M30,30 C70,30 80,60 100,80"></path>
+          <path class="trace" d="M170,30 C130,30 120,60 100,80"></path>
+          <path class="trace" d="M30,130 C70,130 80,100 100,80"></path>
+          <path class="trace" d="M70,150 C85,130 90,110 100,80"></path>
+          <path class="trace" d="M130,150 C115,130 110,110 100,80"></path>
+          <path class="trace" d="M170,130 C130,130 120,100 100,80"></path>
+          <polygon class="mcu" points="100,68 112,75 112,89 100,96 88,89 88,75"></polygon>
+          <text class="mcu-label" x="100" y="83" text-anchor="middle">IN</text>
+        </svg>
+
+        <div class="gauge-block">
+          <div class="gauge-ring" id="gaugeHum" style="--pct:0">
+            <div class="gauge-inner">
+              <span class="gauge-value" id="hum">--</span>
+              <span class="gauge-unit">%RH</span>
+            </div>
+          </div>
+          <span class="gauge-label">Humidity</span>
+        </div>
       </div>
-      <span class="module-state" id="stateVent">CLOSED</span>
-      <button class="switch" id="ventButton" role="switch" aria-checked="false">
-        <span class="switch-track"><span class="switch-thumb"></span></span>
-      </button>
-    </div>
 
-    <div class="module" data-actuator="fan">
-      <div class="module-head">
-        <span class="led" id="ledFan"></span>
-        <h3>Fan</h3>
-      </div>
-      <span class="module-state" id="stateFan">OFF</span>
-      <button class="switch" id="fanButton" role="switch" aria-checked="false">
-        <span class="switch-track"><span class="switch-thumb"></span></span>
-      </button>
-    </div>
+      <div class="gauges">
+        <div class="gauge-block">
+          <div class="gauge-ring" id="extGaugeTemp" style="--pct:0">
+            <div class="gauge-inner">
+              <span class="gauge-value" id="extTemp">--</span>
+              <span class="gauge-unit">&deg;C</span>
+            </div>
+          </div>
+          <span class="gauge-label">External Temperature</span>
+        </div>
 
-    <div class="module" data-actuator="peltier">
-      <div class="module-head">
-        <span class="led" id="ledPeltier"></span>
-        <h3>Peltier</h3>
-      </div>
-      <span class="module-state" id="statePeltier">OFF</span>
-      <button class="switch" id="peltierButton" role="switch" aria-checked="false">
-        <span class="switch-track"><span class="switch-thumb"></span></span>
-      </button>
-    </div>
+        <!-- Signature element: live schematic linking sensors to the MCU to actuators -->
+        <svg class="schematic" id="schematic" viewBox="0 0 200 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <path class="trace" d="M30,30 C70,30 80,60 100,80"></path>
+          <path class="trace" d="M170,30 C130,30 120,60 100,80"></path>
+          <path class="trace" d="M30,130 C70,130 80,100 100,80"></path>
+          <path class="trace" d="M70,150 C85,130 90,110 100,80"></path>
+          <path class="trace" d="M130,150 C115,130 110,110 100,80"></path>
+          <path class="trace" d="M170,130 C130,130 120,100 100,80"></path>
+          <polygon class="mcu" points="100,68 112,75 112,89 100,96 88,89 88,75"></polygon>
+          <text class="mcu-label" x="100" y="83" text-anchor="middle">OUT</text>
+        </svg>
 
-    <div class="module" data-actuator="humidifier">
-      <div class="module-head">
-        <span class="led" id="ledHumidifier"></span>
-        <h3>Humidifier</h3>
+        <div class="gauge-block">
+          <div class="gauge-ring" id="extGaugeHum" style="--pct:0">
+            <div class="gauge-inner">
+              <span class="gauge-value" id="extHum">--</span>
+              <span class="gauge-unit">%RH</span>
+            </div>
+          </div>
+          <span class="gauge-label">External Humidity</span>
+        </div>
       </div>
-      <span class="module-state" id="stateHumidifier">OFF</span>
-      <button class="switch" id="humidifierButton" role="switch" aria-checked="false">
-        <span class="switch-track"><span class="switch-thumb"></span></span>
-      </button>
-    </div>
+    </section>
 
-  </section>
+    <!-- Actuator modules (manual mode) -->
+    <section class="modules hidden" id="control">
 
-  <!-- Auto status panel (auto mode) -->
-  <section class="auto-status" id="autoStatus">
-    <div class="auto-status-head">
-      <span class="led" id="autoModeLed"></span>
-      <h3>Auto Control</h3>
-    </div>
+      <div class="module" data-actuator="vent">
+        <div class="module-head">
+          <span class="led" id="ledVent"></span>
+          <h3>Vent</h3>
+        </div>
+        <span class="module-state" id="stateVent">CLOSED</span>
+        <button class="switch" id="ventButton" role="switch" aria-checked="false">
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+        </button>
+      </div>
 
-    <div class="auto-grid">
-      <div class="auto-item" data-actuator="vent">
-        <span class="led" id="autoLedVent"></span>
-        <span class="auto-item-name">Vent</span>
-        <span class="auto-item-reason" id="autoStateVent">closed</span>
+      <div class="module" data-actuator="fan">
+        <div class="module-head">
+          <span class="led" id="ledFan"></span>
+          <h3>Fan</h3>
+        </div>
+        <span class="module-state" id="stateFan">OFF</span>
+        <button class="switch" id="fanButton" role="switch" aria-checked="false">
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+        </button>
       </div>
-      <div class="auto-item" data-actuator="fan">
-        <span class="led" id="autoLedFan"></span>
-        <span class="auto-item-name">Fan</span>
-        <span class="auto-item-reason" id="autoStateFan">idle</span>
-      </div>
-      <div class="auto-item" data-actuator="peltier">
-        <span class="led" id="autoLedPeltier"></span>
-        <span class="auto-item-name">Peltier</span>
-        <span class="auto-item-reason" id="autoStatePeltier">idle</span>
-      </div>
-      <div class="auto-item" data-actuator="humidifier">
-        <span class="led" id="autoLedHumidifier"></span>
-        <span class="auto-item-name">Humidifier</span>
-        <span class="auto-item-reason" id="autoStateHumidifier">idle</span>
-      </div>
-    </div>
 
-    <div class="auto-summary">
+      <div class="module" data-actuator="peltier">
+        <div class="module-head">
+          <span class="led" id="ledPeltier"></span>
+          <h3>Peltier</h3>
+        </div>
+        <span class="module-state" id="statePeltier">OFF</span>
+        <button class="switch" id="peltierButton" role="switch" aria-checked="false">
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+        </button>
+      </div>
+
+      <div class="module" data-actuator="humidifier">
+        <div class="module-head">
+          <span class="led" id="ledHumidifier"></span>
+          <h3>Humidifier</h3>
+        </div>
+        <span class="module-state" id="stateHumidifier">OFF</span>
+        <button class="switch" id="humidifierButton" role="switch" aria-checked="false">
+          <span class="switch-track"><span class="switch-thumb"></span></span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Auto status panel (auto mode) -->
+    <section class="auto-status" id="autoStatus">
+      <div class="auto-status-head">
+        <span class="led" id="autoModeLed"></span>
+        <h3>Auto Control</h3>
+      </div>
+
+      <div class="auto-grid">
+        <div class="auto-item" data-actuator="vent">
+          <span class="led" id="autoLedVent"></span>
+          <span class="auto-item-name">Vent</span>
+          <span class="auto-item-reason" id="autoStateVent">closed</span>
+        </div>
+        <div class="auto-item" data-actuator="fan">
+          <span class="led" id="autoLedFan"></span>
+          <span class="auto-item-name">Fan</span>
+          <span class="auto-item-reason" id="autoStateFan">idle</span>
+        </div>
+        <div class="auto-item" data-actuator="peltier">
+          <span class="led" id="autoLedPeltier"></span>
+          <span class="auto-item-name">Peltier</span>
+          <span class="auto-item-reason" id="autoStatePeltier">idle</span>
+        </div>
+        <div class="auto-item" data-actuator="humidifier">
+          <span class="led" id="autoLedHumidifier"></span>
+          <span class="auto-item-name">Humidifier</span>
+          <span class="auto-item-reason" id="autoStateHumidifier">idle</span>
+        </div>
+      </div>
+
+      <div class="auto-summary">
+        <span class="log-caret">&gt;</span>
+        <span id="autoSummary">awaiting data&hellip;</span>
+      </div>
+    </section>
+
+    <!-- Log strip -->
+    <footer class="log-strip">
       <span class="log-caret">&gt;</span>
-      <span id="autoSummary">awaiting data&hellip;</span>
-    </div>
-  </section>
+      <span id="ack">awaiting connection&hellip;</span>
+    </footer>
+  </div>
 
-  <!-- Log strip -->
-  <footer class="log-strip">
-    <span class="log-caret">&gt;</span>
-    <span id="ack">awaiting connection&hellip;</span>
-  </footer>
-
-</div>
-
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

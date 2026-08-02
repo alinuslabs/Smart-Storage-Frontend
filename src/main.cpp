@@ -12,7 +12,7 @@
 #include <ESPAsyncWebServer.h>
 #include <LiquidCrystal_I2C.h>
 
-// WIFI CONFIG (Access Point mode - the ESP32 creates its own network)
+// WIFI CONFIG (Access Point mode — the ESP32 creates its own network)
 // Anyone can connect to this network + open the device's IP in a browser,
 // no code access needed. Change these to whatever you like.
 // Note: WPA2 requires the password to be at least 8 characters.
@@ -48,7 +48,8 @@ String peltierState = "0";
 String humidifierState = "0";
 bool reset = false;
 
-// AUTO MODE — IDENTIFIER / REASON TRACKING
+// AUTO MODE — IDENTIFIER / REASON TRACKIN
+// Per-actuator "why" string, e.g. "humidity>95%". Cleared in manual mode.
 String ventReason = "";
 String fanReason = "";
 String peltierReason = "";
@@ -56,12 +57,12 @@ String humidifierReason = "";
 
 // Combined, human-readable summary of what's currently active in auto mode.
 String autoSummary = "";
-
 // COMPONENT
 Servo servoVent;
 RTC_DS3231 rtc;
 DHT dht(dhtPin, DHT22);
 DHT extDht(extDhtPin, DHT22);
+
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 // JSON BUFFER
@@ -215,8 +216,6 @@ void setup(){
     lcd.setCursor(0, i);
     lcd.print("                    ");
   }
-
-  lcd.setCursor(0, 0);
   
   // WEBSOCKET
   ws.onEvent(onEvent);

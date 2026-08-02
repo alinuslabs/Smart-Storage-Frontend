@@ -28,6 +28,9 @@ const logStrip = document.querySelector(".log-strip");
 const autoStatus = document.getElementById("autoStatus");
 const autoSummaryEl = document.getElementById("autoSummary");
 
+const disconnectOverlay = document.getElementById("disconnectOverlay");
+const disconnectMsg = document.getElementById("disconnectMsg");
+
 const settingsToggle = document.getElementById("settingsToggle");
 const settingsPanel = document.getElementById("settingsPanel");
 const hostInput = document.getElementById("hostInput");
@@ -105,12 +108,14 @@ function connect() {
     connLed.classList.add("on");
     schematic.classList.add("live");
     reconnectDelay = 1000;
+    hideDisconnectOverlay();
   };
 
   ws.onclose = () => {
     statusEl.textContent = "Disconnected — retrying…";
     connLed.classList.remove("on");
     schematic.classList.remove("live");
+    showDisconnectOverlay();
     scheduleReconnect();
   };
 
@@ -122,8 +127,19 @@ function connect() {
 }
 
 function scheduleReconnect() {
+  const seconds = Math.round(reconnectDelay / 1000);
+  disconnectMsg.textContent = `Lost connection to the device — retrying in ${seconds}s…`;
   setTimeout(connect, reconnectDelay);
   reconnectDelay = Math.min(reconnectDelay * 1.6, MAX_RECONNECT_DELAY);
+}
+
+// ---------- Disconnected overlay ----------
+function showDisconnectOverlay() {
+  disconnectOverlay.classList.remove("hidden");
+}
+
+function hideDisconnectOverlay() {
+  disconnectOverlay.classList.add("hidden");
 }
 
 function send(cmd) {
@@ -257,6 +273,9 @@ hostSave.addEventListener("click", () => {
     ws && ws.close();
     connect();
   }
+  settingsPanel.classList.toggle("hidden");
+  hostInput.value = getHost();
+  hostInput.placeholder = DEFAULT_HOST;
 });
 
 hostReset.addEventListener("click", () => {

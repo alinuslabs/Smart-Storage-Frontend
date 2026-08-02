@@ -36,6 +36,74 @@ body{
   margin:0 auto;
 }
 
+/* ---------- Disconnected overlay ---------- */
+.disconnect-overlay{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(19,23,28,0.82);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  animation:overlayFadeIn 0.25s ease;
+}
+.disconnect-overlay.hidden{display:none;}
+@keyframes overlayFadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+.disconnect-card{
+  max-width:340px;
+  width:100%;
+  text-align:center;
+  background:var(--bg-panel);
+  border:1px solid var(--accent-red-dim);
+  border-radius:var(--radius);
+  padding:32px 24px;
+  box-shadow:0 0 0 1px rgba(232,85,61,0.15), 0 12px 40px rgba(0,0,0,0.5);
+}
+.disconnect-dot{
+  display:inline-block;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:var(--accent-red);
+  box-shadow:0 0 10px var(--accent-red);
+  margin-bottom:14px;
+  animation:disconnectPulse 1.2s ease-in-out infinite;
+}
+@keyframes disconnectPulse{
+  0%,100%{transform:scale(1);opacity:1;}
+  50%{transform:scale(1.4);opacity:0.5;}
+}
+.disconnect-card h2{
+  font-family:var(--font-display);
+  font-size:18px;
+  font-weight:600;
+  margin:0 0 8px;
+  color:var(--text-primary);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.disconnect-card p{
+  margin:0 0 6px;
+  font-family:var(--font-mono);
+  font-size:13px;
+  color:var(--text-muted);
+  line-height:1.5;
+}
+.disconnect-hint{
+  margin-top:12px !important;
+  font-size:12px !important;
+}
+.disconnect-hint strong{
+  color:var(--accent-amber);
+  font-weight:600;
+}
+
 /* ---------- Top bar ---------- */
 .topbar{
   display:flex;
