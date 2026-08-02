@@ -7,6 +7,7 @@
 #include <SD.h>
 #include <SPI.h>
 #include <FS.h>
+#include <LittleFS.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -211,17 +212,33 @@ void setup(){
   Serial.println("SSID: " + String(ap_ssid));
   Serial.println("AP IP address: " + apIP.toString());
 
-  for (int i = 0; i < 4; i++)
-  {
-    lcd.setCursor(0, i);
-    lcd.print("                    ");
+  lcd.setCursor(0, 0);
+
+  // FILESYSTEM — mount LittleFS so the ESP32 can serve its own dashboard
+  // (index.html, style.css, app.js) instead of relying on an externally
+  // hosted site. This is what makes the whole thing self-contained.
+  if(!LittleFS.begin(true)){ // true = format if mount fails
+    Serial.println("LittleFS mount failed");
+    lcd.println("LittleFS mount failed");
+  } else {
+    Serial.println("LittleFS mounted");
+    lcd.println("LittleFS mounted");
   }
-  
+
+  // Serve the dashboard files. "/" maps to index.html automatically.
+  server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+
   // WEBSOCKET
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 
   server.begin();
+
+  for (int i = 0; i < 4; i++)
+  {
+    lcd.setCursor(0, i);
+    lcd.print("                    ");
+  }
 }
 
 // LOOP

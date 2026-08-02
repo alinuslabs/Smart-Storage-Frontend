@@ -1,12 +1,11 @@
 // ---------- Connection target ----------
-// The ESP32 now runs as its own Access Point (hotspot) rather than joining
-// an existing network, so it always has the same fixed IP: 192.168.4.1.
-// Connect your device to the ESP32's WiFi network, then load this page
-// (ideally served by the ESP32 itself) and it will just work.
-// A manual override is kept in localStorage for local testing / fallback,
-// e.g. if you change the AP's IP configuration in main.cpp.
+// The ESP32 now serves this dashboard itself (from LittleFS) at
+// http://192.168.4.1/, so by default we just connect to whatever host
+// served this page — this works automatically with zero configuration.
+// A manual override is kept in localStorage for local testing / fallback
+// (e.g. opening this file directly from your computer, off-device).
 
-const DEFAULT_HOST = "192.168.4.1";
+const DEFAULT_HOST = window.location.hostname || "192.168.4.1";
 const STORAGE_KEY = "smart-storage-host";
 
 function getHost() {
@@ -116,6 +115,7 @@ function connect() {
     connLed.classList.remove("on");
     schematic.classList.remove("live");
     showDisconnectOverlay();
+    resetDashboard();
     scheduleReconnect();
   };
 
@@ -140,6 +140,35 @@ function showDisconnectOverlay() {
 
 function hideDisconnectOverlay() {
   disconnectOverlay.classList.add("hidden");
+}
+
+// Restores every readout, gauge, actuator, and status panel to its
+// original "no data" display. Called on disconnect so stale readings
+// from before the drop don't linger on screen.
+function resetDashboard() {
+  // Clock / readout text fields
+  document.getElementById("date").textContent = "--";
+  document.getElementById("time").textContent = "--:--:--";
+  document.getElementById("temp").textContent = "--";
+  document.getElementById("hum").textContent = "--";
+  document.getElementById("extTemp").textContent = "--";
+  document.getElementById("extHum").textContent = "--";
+
+  // Gauge rings back to empty
+  ["gaugeTemp", "gaugeHum", "extGaugeTemp", "extGaugeHum"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.setProperty("--pct", 0);
+  });
+
+  // Actuators back to their default OFF/CLOSED display
+  Object.keys(actuators).forEach((key) => setActuatorState(key, false));
+
+  // Auto Status panel back to idle/closed with no reasons
+  Object.keys(autoItems).forEach((key) => setAutoItem(key, false));
+  autoSummaryEl.textContent = "awaiting data…";
+
+  // Log strip / ACK line
+  ackEl.textContent = "awaiting connection…";
 }
 
 function send(cmd) {
@@ -273,9 +302,6 @@ hostSave.addEventListener("click", () => {
     ws && ws.close();
     connect();
   }
-  settingsPanel.classList.toggle("hidden");
-  hostInput.value = getHost();
-  hostInput.placeholder = DEFAULT_HOST;
 });
 
 hostReset.addEventListener("click", () => {
